@@ -1,6 +1,8 @@
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <time.h>
+#include <string.h>
 #include <pthread.h>
 #include <unistd.h>
 
@@ -17,28 +19,6 @@ typedef struct hash_struct
 } hashRecord;
 // global variable idk if this is good with yall
 hashRecord *root = NULL;
-
-int main(int argc, char *argv[])
-{
-    // variables
-    // lead with given test data
-    //  tests
-    // new adds
-    insert('Richard Garriot', 40000);
-    insert('Sid Meier', 50000);
-    insert('Shigeru Miyamoto', 51000);
-    insert('Hideo Kojima', 45000);
-    insert('Gabe Newell', 49000);
-    insert('Roberta Williams', 45900);
-    insert('Carol Shaw', 41000);
-
-    // Updates
-    insert('Carol Shaw', 51000);
-    insert('Shigeru Miyamoto', 61000);
-    insert('Hideo Kojima', 55000);
-
-    // additional tests if we would like :)
-}
 
 uint32_t Jenkins_one_at_a_time_hash(const uint8_t *key, size_t length)
 {
@@ -67,8 +47,10 @@ hashRecord *newRecord(uint32_t h, char *n, uint32_t s)
     return nR;
 }
 
-hashRecord *search(/*hashRecord *root,*/ const char *key)
+hashRecord *search(/*hashRecord *root,*/ char *key)
 {
+    printf("Searching for %s\n", key);
+
     // Convert key (Name) to hash
     uint32_t hashedKey = Jenkins_one_at_a_time_hash(key, strlen(key));
 
@@ -77,16 +59,17 @@ hashRecord *search(/*hashRecord *root,*/ const char *key)
 
     // Linear Search O(n)
     hashRecord *record = NULL;
-    while (root != NULL)
+    hashRecord *current = root;
+    while (current != NULL)
     {
 
-        if (root->hash == hashedKey)
+        if (current->hash == hashedKey)
         {
-            record = root;
+            record = current;
             break;
         }
 
-        root = root->next;
+        current = current->next;
     }
 
     // Release Lock
@@ -102,7 +85,7 @@ hashRecord *search(/*hashRecord *root,*/ const char *key)
         return record;
 }
 
-void insert(const char *key, uint32_t salary /*, hashRecord *table*/)
+void insert(char *key, uint32_t salary /*, hashRecord *table*/)
 {
     // variables
     struct timespec currentTime;
@@ -110,25 +93,33 @@ void insert(const char *key, uint32_t salary /*, hashRecord *table*/)
     char *commandMsg = "";
     char *lockMsg = "";
 
+    // Get current time?
+    // clock_gettime(CLOCK_REALTIME, &currentTime);
+
     // Prints
     // command
     timeStamp = (long long)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
-    printf("%d, Insert, %s, %d", timeStamp, key, salary);
+    printf("%lld, Insert, %s, %d\n", timeStamp, key, salary);
     // locks
     // timeStamp = (long long)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
     // printf("%d, Read Lock Acquired ", timeStamp);
 
     // search
-    hashRecord *entry = search(*key); // include search file once ready
+    hashRecord *entry = search(key); // include search file once ready
     // Present?
     if (entry == NULL)
     { // new Data
         // create new entry
-        entry->next = newRecord(jenkins_one_at_a_time(key, len(key)), key, salary);
+        entry = newRecord(Jenkins_one_at_a_time_hash(key, strlen(key)), key, salary);
+        // insert
+        entry->next = root;
+        root = entry;
+        printf("New Entry Created\n");
     }
     else
     { // update
         entry->salary = salary;
+        printf("Entry Updated\n");
     }
 
     // release lock
@@ -139,4 +130,38 @@ void insert(const char *key, uint32_t salary /*, hashRecord *table*/)
 
 void delete()
 {
+}
+
+void display_list(hashRecord *root)
+{
+    hashRecord *current = root;
+    while (current != NULL)
+    {
+        printf("Name: %s, Salary: %d\n", current->name, current->salary);
+        current = current->next;
+    }
+}
+
+int main(int argc, char *argv[])
+{
+    // variables
+    // lead with given test data
+    //  tests
+    // new adds
+    insert("Richard Garriot", 40000);
+    insert("Sid Meier", 50000);
+    insert("Shigeru Miyamoto", 51000);
+    insert("Hideo Kojima", 45000);
+    insert("Gabe Newell", 49000);
+    insert("Roberta Williams", 45900);
+    insert("Carol Shaw", 41000);
+
+    // Updates
+    insert("Carol Shaw", 51000);
+    insert("Shigeru Miyamoto", 61000);
+    insert("Hideo Kojima", 55000);
+
+    display_list(root);
+
+    // additional tests if we would like :)
 }
