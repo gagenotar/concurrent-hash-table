@@ -128,8 +128,57 @@ void insert(char *key, uint32_t salary /*, hashRecord *table*/)
     // printf("%d, Read Lock RELEASED ", timeStamp);
 }
 
-void delete()
-{
+void delete(const char* key, hashRecord** table) {
+    if (table == NULL || table == NULL) {
+        printf("Table is empty or not initialized.\n");
+        return;
+    }
+
+    // Convert key (Name) to hash
+    uint32_t hashedKey = Jenkins_one_at_a_time_hash((const uint8_t)key, strlen(key));
+
+    // Acquire Lock
+    struct timespec currentTime;
+    clock_gettime(CLOCK_REALTIME, &currentTime);
+    long long timeStamp = (long long)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
+    printf("%lld, Write Lock Acquired\n", timeStamp);
+
+    // Traverse the list to find the record
+    hashRecord* current = table;
+    hashRecord prev = NULL;
+
+    while (current != NULL) {
+        if (current->hash == hashedKey) {
+            // If record is found
+            if (prev == NULL) {
+                // The record to delete is the head of the list
+                table = current->next;
+            } else {
+                // The record to delete is not the head
+                prev->next = current->next;
+            }
+            // Print deletion message and free memory
+            printf("Record with name '%s' and hash %u deleted.\n", key, hashedKey);
+            free(current);
+
+            // Release Lock
+            clock_gettime(CLOCK_REALTIME, &currentTime);
+            timeStamp = (long long)currentTime.tv_sec 1e9 + currentTime.tv_nsec;
+            printf("%lld, Write Lock Released\n", timeStamp);
+
+            return;
+        }
+        prev = current;
+        current = current->next;
+    }
+
+    // Record not found
+    printf("Record with name '%s' not found.\n", key);
+
+    // Release Lock
+    clock_gettime(CLOCK_REALTIME, &currentTime);
+    timeStamp = (long long)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
+    printf("%lld, Write Lock Released\n", timeStamp);
 }
 
 void display_list(hashRecord *root)
