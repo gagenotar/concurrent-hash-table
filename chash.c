@@ -17,8 +17,10 @@ typedef struct hash_struct
     uint32_t salary;
     struct hash_struct *next;
 } hashRecord;
+
 // global variable idk if this is good with yall
 hashRecord *root = NULL;
+pthread_rwlock_t rw_lock;
 
 uint32_t Jenkins_one_at_a_time_hash(const uint8_t *key, size_t length)
 {
@@ -51,29 +53,37 @@ hashRecord *search(/*hashRecord *root,*/ char *key)
 {
     printf("Searching for %s\n", key);
 
-    // Convert key (Name) to hash
+    // Compute hash
     uint32_t hashedKey = Jenkins_one_at_a_time_hash(key, strlen(key));
 
     // Acquire Lock
-    // Timestamp
+    pthread_rwlock_rdlock(&rw_lock);
+    struct timespec currentTime;
+    clock_gettime(CLOCK_REALTIME, &currentTime);
+    long long timeStamp = (long long)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
+    printf("%lld, Read Lock Acquired\n", timeStamp);
+
+    // Convert key (Name) to hash
+    // uint32_t hashedKey = Jenkins_one_at_a_time_hash(key, strlen(key));
 
     // Linear Search O(n)
     hashRecord *record = NULL;
     hashRecord *current = root;
     while (current != NULL)
     {
-
         if (current->hash == hashedKey)
         {
             record = current;
             break;
         }
-
         current = current->next;
     }
 
     // Release Lock
-    // Timestamp
+    pthread_rwlock_unlock(&rw_lock);
+    clock_gettime(CLOCK_REALTIME, &currentTime);
+    timeStamp = (long long)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
+    printf("%lld, Read Lock Released\n", timeStamp);
 
     // Return Data
     if (record == NULL)
@@ -93,66 +103,82 @@ void insert(char *key, uint32_t salary /*, hashRecord *table*/)
     char *commandMsg = "";
     char *lockMsg = "";
 
-    // Get current time?
-    // clock_gettime(CLOCK_REALTIME, &currentTime);
+    // Convert key (Name) to hash
+    uint32_t hashedKey = Jenkins_one_at_a_time_hash(key, strlen(key));
 
-    // Prints
-    // command
+    // Prints command
     timeStamp = (long long)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
     printf("%lld, Insert, %s, %d\n", timeStamp, key, salary);
-    // locks
-    // timeStamp = (long long)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
-    // printf("%d, Read Lock Acquired ", timeStamp);
+    
+    // Acquire Lock
+    pthread_rwlock_wrlock(&rw_lock);
+    clock_gettime(CLOCK_REALTIME, &currentTime);
+    timeStamp = (long long)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
+    printf("%lld, Write Lock Acquired\n", timeStamp);
 
     // search
-    hashRecord *entry = search(key); // include search file once ready
-    // Present?
-    if (entry == NULL)
-    { // new Data
-        // create new entry
-        entry = newRecord(Jenkins_one_at_a_time_hash(key, strlen(key)), key, salary);
-        // insert
-        entry->next = root;
-        root = entry;
-        printf("New Entry Created\n");
-    }
-    else
-    { // update
-        entry->salary = salary;
-        printf("Entry Updated\n");
+    hashRecord *current = root;
+    while (current != NULL) {
+        if (current->hash == hashedKey) {
+            current->salary = salary;
+            printf("Entry Updated\n");
+            
+            // Release Lock
+            pthread_rwlock_unlock(&rw_lock);
+            clock_gettime(CLOCK_REALTIME, &currentTime);
+            timeStamp = (long long)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
+            printf("%lld, Write Lock Released\n", timeStamp);
+
+            return;
+        }
+        current = current->next;
     }
 
-    // release lock
+    // create new entry
+    hashRecord *entry = newRecord(Jenkins_one_at_a_time_hash(key, strlen(key)), key, salary);
+    // insert
+    entry->next = root;
+    root = entry;
+    printf("New Entry Created\n");
+
+    // Release Lock
+    pthread_rwlock_unlock(&rw_lock);
+    clock_gettime(CLOCK_REALTIME, &currentTime);
+    timeStamp = (long long)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
+    printf("%lld, Write Lock Released\n", timeStamp);
+
     // print
     // time_stamp = (long long)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
     // printf("%d, Read Lock RELEASED ", timeStamp);
 }
 
 void delete(const char* key, hashRecord** table) {
-    if (table == NULL || table == NULL) {
+    if (table == NULL) {
         printf("Table is empty or not initialized.\n");
         return;
     }
 
     // Convert key (Name) to hash
-    uint32_t hashedKey = Jenkins_one_at_a_time_hash((const uint8_t)key, strlen(key));
+    uint32_t hashedKey = Jenkins_one_at_a_time_hash(key, strlen(key));
 
     // Acquire Lock
+    pthread_rwlock_wrlock(&rw_lock);
     struct timespec currentTime;
     clock_gettime(CLOCK_REALTIME, &currentTime);
     long long timeStamp = (long long)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
     printf("%lld, Write Lock Acquired\n", timeStamp);
 
+
     // Traverse the list to find the record
-    hashRecord* current = table;
-    hashRecord prev = NULL;
+    hashRecord *current = root;
+    hashRecord *prev = NULL;
 
     while (current != NULL) {
         if (current->hash == hashedKey) {
             // If record is found
             if (prev == NULL) {
                 // The record to delete is the head of the list
-                table = current->next;
+                root = current->next;
             } else {
                 // The record to delete is not the head
                 prev->next = current->next;
@@ -162,8 +188,9 @@ void delete(const char* key, hashRecord** table) {
             free(current);
 
             // Release Lock
+            pthread_rwlock_unlock(&rw_lock);
             clock_gettime(CLOCK_REALTIME, &currentTime);
-            timeStamp = (long long)currentTime.tv_sec 1e9 + currentTime.tv_nsec;
+            timeStamp = (long long)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
             printf("%lld, Write Lock Released\n", timeStamp);
 
             return;
@@ -176,6 +203,7 @@ void delete(const char* key, hashRecord** table) {
     printf("Record with name '%s' not found.\n", key);
 
     // Release Lock
+    pthread_rwlock_unlock(&rw_lock);
     clock_gettime(CLOCK_REALTIME, &currentTime);
     timeStamp = (long long)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
     printf("%lld, Write Lock Released\n", timeStamp);
@@ -193,6 +221,8 @@ void display_list(hashRecord *root)
 
 int main(int argc, char *argv[])
 {
+    pthread_rwlock_init(&rw_lock, NULL);
+
     // variables
     // lead with given test data
     //  tests
@@ -209,6 +239,9 @@ int main(int argc, char *argv[])
     insert("Carol Shaw", 51000);
     insert("Shigeru Miyamoto", 61000);
     insert("Hideo Kojima", 55000);
+
+    // Search
+    search("Carol Shaw");
 
     display_list(root);
 
