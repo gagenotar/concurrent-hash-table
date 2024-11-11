@@ -5,6 +5,9 @@
 #include <time.h>
 #include <pthread.h>
 #include <unistd.h>
+#include<stdio.h>
+#include<stdlib.h>
+#include<string.h>
 
 #ifdef linux
 #include <semaphor.h>
@@ -20,6 +23,10 @@ typedef struct hash_struct
 
 int main(int argc, char *argv[])
 {
+    
+    //create the input and output files
+    FILE* input = fopen("commands.txt","r");
+    FILE* output = fopen("output.txt","w");	
     // variables
     hashRecord* table = NULL; // lead with given test data
 
