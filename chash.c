@@ -5,11 +5,12 @@
 #include <string.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <filesystem>
 
 // #ifdef linux
 // #include <semaphor.h>
 // #endif
-
+FILE *fp;
 typedef struct hash_struct
 {
     uint32_t hash;
@@ -18,9 +19,9 @@ typedef struct hash_struct
     struct hash_struct *next;
 } hashRecord;
 
-// global variable idk if this is good with yall
 hashRecord *root = NULL;
 pthread_rwlock_t rw_lock;
+pthread_condition_t id_lock;
 
 uint32_t Jenkins_one_at_a_time_hash(const uint8_t *key, size_t length)
 {
@@ -51,7 +52,7 @@ hashRecord *newRecord(uint32_t h, char *n, uint32_t s)
 
 hashRecord *search(/*hashRecord *root,*/ char *key)
 {
-    printf("Searching for %s\n", key);
+    fprintf(FILE_NAME, "Searching for %s\n", key);
 
     // Compute hash
     uint32_t hashedKey = Jenkins_one_at_a_time_hash(key, strlen(key));
@@ -97,6 +98,7 @@ hashRecord *search(/*hashRecord *root,*/ char *key)
 
 void insert(char *key, uint32_t salary /*, hashRecord *table*/)
 {
+    pthread_conditional_lock(&id_lock);
     // variables
     struct timespec currentTime;
     long long timeStamp; // maybe a little bit of an overkill
@@ -109,7 +111,7 @@ void insert(char *key, uint32_t salary /*, hashRecord *table*/)
     // Prints command
     timeStamp = (long long)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
     printf("%lld, Insert, %s, %d\n", timeStamp, key, salary);
-    
+
     // Acquire Lock
     pthread_rwlock_wrlock(&rw_lock);
     clock_gettime(CLOCK_REALTIME, &currentTime);
@@ -118,11 +120,13 @@ void insert(char *key, uint32_t salary /*, hashRecord *table*/)
 
     // search
     hashRecord *current = root;
-    while (current != NULL) {
-        if (current->hash == hashedKey) {
+    while (current != NULL)
+    {
+        if (current->hash == hashedKey)
+        {
             current->salary = salary;
             printf("Entry Updated\n");
-            
+
             // Release Lock
             pthread_rwlock_unlock(&rw_lock);
             clock_gettime(CLOCK_REALTIME, &currentTime);
@@ -152,8 +156,10 @@ void insert(char *key, uint32_t salary /*, hashRecord *table*/)
     // printf("%d, Read Lock RELEASED ", timeStamp);
 }
 
-void delete(const char* key, hashRecord** table) {
-    if (table == NULL) {
+void delete(const char *key, hashRecord **table)
+{
+    if (table == NULL)
+    {
         printf("Table is empty or not initialized.\n");
         return;
     }
@@ -168,18 +174,22 @@ void delete(const char* key, hashRecord** table) {
     long long timeStamp = (long long)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
     printf("%lld, Write Lock Acquired\n", timeStamp);
 
-
     // Traverse the list to find the record
     hashRecord *current = root;
     hashRecord *prev = NULL;
 
-    while (current != NULL) {
-        if (current->hash == hashedKey) {
+    while (current != NULL)
+    {
+        if (current->hash == hashedKey)
+        {
             // If record is found
-            if (prev == NULL) {
+            if (prev == NULL)
+            {
                 // The record to delete is the head of the list
                 root = current->next;
-            } else {
+            }
+            else
+            {
                 // The record to delete is not the head
                 prev->next = current->next;
             }
@@ -221,29 +231,25 @@ void display_list(hashRecord *root)
 
 int main(int argc, char *argv[])
 {
-    pthread_rwlock_init(&rw_lock, NULL);
+    /*          *******for the implementation the comment sections can change based on I/O********               */
 
-    // variables
-    // lead with given test data
-    //  tests
-    // new adds
-    insert("Richard Garriot", 40000);
-    insert("Sid Meier", 50000);
-    insert("Shigeru Miyamoto", 51000);
-    insert("Hideo Kojima", 45000);
-    insert("Gabe Newell", 49000);
-    insert("Roberta Williams", 45900);
-    insert("Carol Shaw", 41000);
+    // var
+    pthread_rwlock_a(&rw_lock, NULL);
+    pthread_conditional_t(&id_lock, NULL); // conditional variable for inserts and deletes
+    pthread_t *threads;                    // = (pthread_T*)malloc(sizeof(pthread_t) * num_threads) add section after I/O
+    // may need thread attributes use this code for it place where applicable
+    /*
+        //put this at top of file
+        typdef struct {
+            int thread_id;
+            //other attributes
+        }thread_data_t;
 
-    // Updates
-    insert("Carol Shaw", 51000);
-    insert("Shigeru Miyamoto", 61000);
-    insert("Hideo Kojima", 55000);
-
-    // Search
-    search("Carol Shaw");
-
-    display_list(root);
-
-    // additional tests if we would like :)
+        //leave in this section
+        thread_data_t *threads_data =(thread_data_t*)malloc(num_threads*sizeof(thread_data_t));
+    */
+    // we need a way to run all inserts first idk how? I do have the cv set up for it.
+    pthread_t *threads; //= (pthread_t*)malloc(num_threads * sizeof(pthread_t)); //threads
+    pthread_attr_t threads_attributes;
+    // to access just do threads[i] and to assign task do pthread_create(thread[i], attr, function, arg) [attr == null]
 }
