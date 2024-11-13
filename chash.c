@@ -19,6 +19,14 @@ typedef struct hash_struct
     struct hash_struct *next;
 } hashRecord;
 
+//struct to track each of the commands  
+struct Commands
+{
+    char action[10];
+    char name[50];
+    int salary;
+};
+
 hashRecord *root = NULL;
 pthread_rwlock_t rw_lock;
 pthread_condition_t id_lock;
@@ -232,6 +240,46 @@ void display_list(hashRecord *root)
 int main(int argc, char *argv[])
 {
     /*          *******for the implementation the comment sections can change based on I/O********               */
+    //create the input and output files
+    //make sure that your commands.txt input file is in the same
+    //directory as the .c file so it can read it
+    FILE* input = fopen("commands.txt","r");
+    FILE* output = fopen("output.txt","w");   
+    //create a buffer to read each line 
+    char line[256];
+    //get the next line and tokenize it 
+    fgets(line,sizeof(line),input);
+    char* token = strtok(line,",");
+    token = strtok(NULL,",");
+    //get the number of threads 
+    int numThreads = atoi(token);
+    //read the last two tokens on the line
+    token = strtok(NULL,",");
+    token = strtok(NULL,",");
+
+    
+    //create an array to store all of the commands 
+    struct Commands commandsArray[numThreads];
+    //read the remaining lines of input and store each value into an array 
+    for(int i=0;i<numThreads;i++)
+    {
+        //get the next line of input
+        fgets(line,sizeof(line),input);
+        //partition that line into tokens of action, name, salary
+        token = strtok(line,",");
+
+        //get the values of all of the struct 
+        strcpy(array[i].action,token);
+        token = strtok(NULL,",");
+
+        strcpy(array[i].name,token);
+        token = strtok(NULL,",");
+
+        array[i].salary = atoi(token);
+        token = strtok(NULL,",");
+    }
+    //close the input file 
+    fclose(input);
 
     // var
     pthread_rwlock_a(&rw_lock, NULL);
