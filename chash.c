@@ -5,7 +5,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <unistd.h>
-#include <filesystem>
+// #include <filesystem.h>
 
 // #ifdef linux
 // #include <semaphor.h>
@@ -29,7 +29,7 @@ struct Commands
 
 hashRecord *root = NULL;
 pthread_rwlock_t rw_lock;
-pthread_condition_t id_lock;
+// pthread_condition_t id_lock;
 
 uint32_t Jenkins_one_at_a_time_hash(const uint8_t *key, size_t length)
 {
@@ -60,7 +60,7 @@ hashRecord *newRecord(uint32_t h, char *n, uint32_t s)
 
 hashRecord *search(/*hashRecord *root,*/ char *key)
 {
-    fprintf(FILE_NAME, "Searching for %s\n", key);
+    // fprintf(FILE_NAME, "Searching for %s\n", key);
 
     // Compute hash
     uint32_t hashedKey = Jenkins_one_at_a_time_hash(key, strlen(key));
@@ -106,7 +106,7 @@ hashRecord *search(/*hashRecord *root,*/ char *key)
 
 void insert(char *key, uint32_t salary /*, hashRecord *table*/)
 {
-    pthread_conditional_lock(&id_lock);
+    // pthread_conditional_lock(&id_lock);
     // variables
     struct timespec currentTime;
     long long timeStamp; // maybe a little bit of an overkill
@@ -269,22 +269,87 @@ int main(int argc, char *argv[])
         token = strtok(line,",");
 
         //get the values of all of the struct 
-        strcpy(array[i].action,token);
+        strcpy(commandsArray[i].action,token);
         token = strtok(NULL,",");
 
-        strcpy(array[i].name,token);
+        strcpy(commandsArray[i].name,token);
         token = strtok(NULL,",");
 
-        array[i].salary = atoi(token);
+        commandsArray[i].salary = atoi(token);
         token = strtok(NULL,",");
     }
     //close the input file 
     fclose(input);
 
+    // Initialize the read-write lock
+    pthread_rwlock_init(&rw_lock, NULL);
+    // Initialize condition variable and mutex
+    pthread_cond_t cv = PTHREAD_COND_INITIALIZER;
+    pthread_mutex_t cv_mutex = PTHREAD_MUTEX_INITIALIZER;
+    int inserts_done = 0;
+    int numInserts = 0;
+
+    // Count the number of insert commands
+    for (int i = 0; i < numThreads; i++)
+    {
+        if (strcmp(commandsArray[i].action, "insert") == 0)
+        {
+            numInserts++;
+        }
+    }
+    
+    // Function to be executed by each thread
+    void *execute_command(void *arg)
+    {
+        struct Commands *command = (struct Commands *)arg;
+        if (strcmp(command->action, "insert") == 0)
+        {
+            insert(command->name, command->salary);
+            pthread_mutex_lock(&cv_mutex);
+            inserts_done++;
+            pthread_cond_signal(&cv);
+            pthread_mutex_unlock(&cv_mutex);
+        }
+        else if (strcmp(command->action, "delete") == 0)
+        {
+            pthread_mutex_lock(&cv_mutex);
+            while (inserts_done < numInserts) // numInserts is the total number of insert operations
+            {
+                pthread_cond_wait(&cv, &cv_mutex);
+            }
+            pthread_mutex_unlock(&cv_mutex);
+            delete(command->name, &root);
+        }
+        else if (strcmp(command->action, "search") == 0)
+        {
+            search(command->name);
+        }
+        return NULL;
+    }
+
+    // Create and execute threads
+    pthread_t threads[numThreads];
+    for (int i = 0; i < numThreads; i++)
+    {
+        pthread_create(&threads[i], NULL, execute_command, (void *)&commandsArray[i]);
+    }
+
+    // Join threads
+    for (int i = 0; i < numThreads; i++)
+    {
+        pthread_join(threads[i], NULL);
+    }
+
+    // Destroy the read-write lock
+    pthread_rwlock_destroy(&rw_lock);
+
+    // Display the final state of the hash table
+    display_list(root);
+
     // var
-    pthread_rwlock_a(&rw_lock, NULL);
-    pthread_conditional_t(&id_lock, NULL); // conditional variable for inserts and deletes
-    pthread_t *threads;                    // = (pthread_T*)malloc(sizeof(pthread_t) * num_threads) add section after I/O
+    // pthread_rwlock_a(&rw_lock, NULL);
+    // pthread_conditional_t(&id_lock, NULL); // conditional variable for inserts and deletes
+    // pthread_t *threads;                    // = (pthread_T*)malloc(sizeof(pthread_t) * num_threads) add section after I/O
     // may need thread attributes use this code for it place where applicable
     /*
         //put this at top of file
@@ -297,7 +362,7 @@ int main(int argc, char *argv[])
         thread_data_t *threads_data =(thread_data_t*)malloc(num_threads*sizeof(thread_data_t));
     */
     // we need a way to run all inserts first idk how? I do have the cv set up for it.
-    pthread_t *threads; //= (pthread_t*)malloc(num_threads * sizeof(pthread_t)); //threads
-    pthread_attr_t threads_attributes;
+    // pthread_t *threads; //= (pthread_t*)malloc(num_threads * sizeof(pthread_t)); //threads
+    // pthread_attr_t threads_attributes;
     // to access just do threads[i] and to assign task do pthread_create(thread[i], attr, function, arg) [attr == null]
 }
