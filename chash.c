@@ -19,7 +19,7 @@ typedef struct hash_struct
     struct hash_struct *next;
 } hashRecord;
 
-//struct to track each of the commands  
+// Struct to track each of the commands  
 struct Commands
 {
     char action[10];
@@ -29,7 +29,10 @@ struct Commands
 
 hashRecord *root = NULL;
 pthread_rwlock_t rw_lock;
-// pthread_condition_t id_lock;
+pthread_cond_t cv = PTHREAD_COND_INITIALIZER; // Initialize the conditional variable
+pthread_mutex_t cv_mutex = PTHREAD_MUTEX_INITIALIZER; // Initialize the mutex
+int inserts_done = 0; // Number of insert operations completed
+int numInserts = 0; // Number of insert commands
 
 uint32_t Jenkins_one_at_a_time_hash(const uint8_t *key, size_t length)
 {
@@ -72,9 +75,6 @@ hashRecord *search(/*hashRecord *root,*/ char *key)
     long long timeStamp = (long long)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
     printf("%lld, Read Lock Acquired\n", timeStamp);
 
-    // Convert key (Name) to hash
-    // uint32_t hashedKey = Jenkins_one_at_a_time_hash(key, strlen(key));
-
     // Linear Search O(n)
     hashRecord *record = NULL;
     hashRecord *current = root;
@@ -106,8 +106,7 @@ hashRecord *search(/*hashRecord *root,*/ char *key)
 
 void insert(char *key, uint32_t salary /*, hashRecord *table*/)
 {
-    // pthread_conditional_lock(&id_lock);
-    // variables
+    // Variables for timestamp and messages
     struct timespec currentTime;
     long long timeStamp; // maybe a little bit of an overkill
     char *commandMsg = "";
@@ -116,26 +115,27 @@ void insert(char *key, uint32_t salary /*, hashRecord *table*/)
     // Convert key (Name) to hash
     uint32_t hashedKey = Jenkins_one_at_a_time_hash(key, strlen(key));
 
-    // Prints command
+    // Print command with timestamp
     timeStamp = (long long)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
     printf("%lld, Insert, %s, %d\n", timeStamp, key, salary);
 
-    // Acquire Lock
+    // Acquire Write Lock
     pthread_rwlock_wrlock(&rw_lock);
     clock_gettime(CLOCK_REALTIME, &currentTime);
     timeStamp = (long long)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
     printf("%lld, Write Lock Acquired\n", timeStamp);
 
-    // search
+    // Search for existing record with the same hash
     hashRecord *current = root;
     while (current != NULL)
     {
         if (current->hash == hashedKey)
         {
+            // If found, update the salary
             current->salary = salary;
             printf("Entry Updated\n");
 
-            // Release Lock
+            // Release Write Lock
             pthread_rwlock_unlock(&rw_lock);
             clock_gettime(CLOCK_REALTIME, &currentTime);
             timeStamp = (long long)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
@@ -146,22 +146,18 @@ void insert(char *key, uint32_t salary /*, hashRecord *table*/)
         current = current->next;
     }
 
-    // create new entry
+    // If not found, create a new record
     hashRecord *entry = newRecord(Jenkins_one_at_a_time_hash(key, strlen(key)), key, salary);
-    // insert
+    // Insert the new record at the beginning of the list
     entry->next = root;
     root = entry;
     printf("New Entry Created\n");
 
-    // Release Lock
+    // Release Write Lock
     pthread_rwlock_unlock(&rw_lock);
     clock_gettime(CLOCK_REALTIME, &currentTime);
     timeStamp = (long long)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
     printf("%lld, Write Lock Released\n", timeStamp);
-
-    // print
-    // time_stamp = (long long)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
-    // printf("%d, Read Lock RELEASED ", timeStamp);
 }
 
 void delete(const char *key, hashRecord **table)
@@ -237,95 +233,107 @@ void display_list(hashRecord *root)
     }
 }
 
+void *execute_command(void *arg)
+{
+    struct Commands *command = (struct Commands *)arg;
+
+    if (strcmp(command->action, "insert") == 0)
+    {
+        insert(command->name, command->salary);
+
+        // Signal that an insert operation is done
+        pthread_mutex_lock(&cv_mutex);
+        inserts_done++;
+        printf("Insert done: %d/%d\n", inserts_done, numInserts); // Debugging statement
+        if (inserts_done == numInserts)
+        {
+            pthread_cond_broadcast(&cv);
+            printf("All inserts done, broadcast signal sent.\n"); // Debugging statement
+        }
+        pthread_mutex_unlock(&cv_mutex);
+    }
+    else if (strcmp(command->action, "delete") == 0)
+    {
+        // Wait until all insert operations are done
+        pthread_mutex_lock(&cv_mutex);
+        while (inserts_done < numInserts)
+        {
+            printf("Waiting for inserts to complete. Current: %d/%d\n", inserts_done, numInserts); // Debugging statement
+            pthread_cond_wait(&cv, &cv_mutex);
+        }
+        pthread_mutex_unlock(&cv_mutex);
+
+        delete(command->name, &root);
+    }
+    else if (strcmp(command->action, "search") == 0)
+    {
+        hashRecord *result = search(command->name);
+        if (result != NULL)
+        {
+            printf("Found: Name: %s, Salary: %d\n", result->name, result->salary);
+        }
+    }
+    return NULL;
+}
+
 int main(int argc, char *argv[])
 {
-    /*          *******for the implementation the comment sections can change based on I/O********               */
-    //create the input and output files
-    //make sure that your commands.txt input file is in the same
-    //directory as the .c file so it can read it
+
+
+    // Create the input and output files
+    // Make sure that your commands.txt input file is in the same
+    // directory as the .c file so it can read it.
     FILE* input = fopen("commands.txt","r");
     FILE* output = fopen("output.txt","w");   
-    //create a buffer to read each line 
+
+    // Create a buffer to read each line 
     char line[256];
-    //get the next line and tokenize it 
+
+    // Get the next line and tokenize it
     fgets(line,sizeof(line),input);
     char* token = strtok(line,",");
     token = strtok(NULL,",");
-    //get the number of threads 
+
+    // Get the number of threads 
     int numThreads = atoi(token);
-    //read the last two tokens on the line
+
+    // Read the last two tokens on the line
     token = strtok(NULL,",");
     token = strtok(NULL,",");
 
-    
-    //create an array to store all of the commands 
+    // Create an array to store all of the commands 
     struct Commands commandsArray[numThreads];
-    //read the remaining lines of input and store each value into an array 
+    
+    // Read the remaining lines of input and store each value into an array 
     for(int i=0;i<numThreads;i++)
     {
-        //get the next line of input
-        fgets(line,sizeof(line),input);
-        //partition that line into tokens of action, name, salary
+        // Get the next line of input
+        fgets(line,sizeof(line), input);
+
+        // Partition that line into tokens of action, name, salary
         token = strtok(line,",");
 
-        //get the values of all of the struct 
-        strcpy(commandsArray[i].action,token);
+        // Get the values of all of the struct 
+        strcpy(commandsArray[i].action, token);
         token = strtok(NULL,",");
 
-        strcpy(commandsArray[i].name,token);
+        strcpy(commandsArray[i].name, token);
         token = strtok(NULL,",");
 
         commandsArray[i].salary = atoi(token);
         token = strtok(NULL,",");
-    }
-    //close the input file 
-    fclose(input);
 
-    // Initialize the read-write lock
-    pthread_rwlock_init(&rw_lock, NULL);
-    // Initialize condition variable and mutex
-    pthread_cond_t cv = PTHREAD_COND_INITIALIZER;
-    pthread_mutex_t cv_mutex = PTHREAD_MUTEX_INITIALIZER;
-    int inserts_done = 0;
-    int numInserts = 0;
-
-    // Count the number of insert commands
-    for (int i = 0; i < numThreads; i++)
-    {
+        // Check if the action is an insert command
         if (strcmp(commandsArray[i].action, "insert") == 0)
         {
             numInserts++;
         }
     }
-    
-    // Function to be executed by each thread
-    void *execute_command(void *arg)
-    {
-        struct Commands *command = (struct Commands *)arg;
-        if (strcmp(command->action, "insert") == 0)
-        {
-            insert(command->name, command->salary);
-            pthread_mutex_lock(&cv_mutex);
-            inserts_done++;
-            pthread_cond_signal(&cv);
-            pthread_mutex_unlock(&cv_mutex);
-        }
-        else if (strcmp(command->action, "delete") == 0)
-        {
-            pthread_mutex_lock(&cv_mutex);
-            while (inserts_done < numInserts) // numInserts is the total number of insert operations
-            {
-                pthread_cond_wait(&cv, &cv_mutex);
-            }
-            pthread_mutex_unlock(&cv_mutex);
-            delete(command->name, &root);
-        }
-        else if (strcmp(command->action, "search") == 0)
-        {
-            search(command->name);
-        }
-        return NULL;
-    }
+
+    // Close the input file 
+    fclose(input);
+
+    pthread_rwlock_init(&rw_lock, NULL); // Initialize the read-write lock
 
     // Create and execute threads
     pthread_t threads[numThreads];
