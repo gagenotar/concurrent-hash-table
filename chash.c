@@ -5,11 +5,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <unistd.h>
-// #include <filesystem.h>
 
-// #ifdef linux
-// #include <semaphor.h>
-// #endif
 FILE *fp;
 typedef struct hash_struct
 {
@@ -27,8 +23,8 @@ struct Commands
     int salary;
 };
 
-hashRecord *root = NULL;
-pthread_rwlock_t rw_lock;
+hashRecord *root = NULL; // Head of the linked list
+pthread_rwlock_t rw_lock; // Read-write lock
 pthread_cond_t cv = PTHREAD_COND_INITIALIZER; // Initialize the conditional variable
 pthread_mutex_t cv_mutex = PTHREAD_MUTEX_INITIALIZER; // Initialize the mutex
 int inserts_done = 0; // Number of insert operations completed
@@ -353,24 +349,4 @@ int main(int argc, char *argv[])
 
     // Display the final state of the hash table
     display_list(root);
-
-    // var
-    // pthread_rwlock_a(&rw_lock, NULL);
-    // pthread_conditional_t(&id_lock, NULL); // conditional variable for inserts and deletes
-    // pthread_t *threads;                    // = (pthread_T*)malloc(sizeof(pthread_t) * num_threads) add section after I/O
-    // may need thread attributes use this code for it place where applicable
-    /*
-        //put this at top of file
-        typdef struct {
-            int thread_id;
-            //other attributes
-        }thread_data_t;
-
-        //leave in this section
-        thread_data_t *threads_data =(thread_data_t*)malloc(num_threads*sizeof(thread_data_t));
-    */
-    // we need a way to run all inserts first idk how? I do have the cv set up for it.
-    // pthread_t *threads; //= (pthread_t*)malloc(num_threads * sizeof(pthread_t)); //threads
-    // pthread_attr_t threads_attributes;
-    // to access just do threads[i] and to assign task do pthread_create(thread[i], attr, function, arg) [attr == null]
 }
