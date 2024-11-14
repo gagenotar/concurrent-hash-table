@@ -21,6 +21,5 @@ typedef struct hash_struct
 extern hashRecord *root; // Head of the linked list
 
 hashRecord *newRecord(uint32_t h, char *n, uint32_t s);
-hashRecord *search(/*hashRecord *root,*/ char *key);
 
 #endif

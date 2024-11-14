@@ -4,7 +4,7 @@
 #include <time.h>
 #include <string.h>
 #include <pthread.h>
-#include<inttypes.h>
+#include <inttypes.h>
 #include <unistd.h>
 #include "commands_struct.h"
 #include "hash_struct.h"
@@ -28,6 +28,49 @@ uint32_t Jenkins_one_at_a_time_hash(const uint8_t *key, size_t length)
     return hash;
 }
 
+void search(/*hashRecord *root,*/ char *key)
+{
+    // Compute hash
+    uint32_t hashedKey = Jenkins_one_at_a_time_hash((const uint8_t *)key, strlen(key));
+
+    // Acquire Lock
+    pthread_rwlock_rdlock(&rw_lock);
+    struct timespec currentTime;
+    clock_gettime(CLOCK_REALTIME, &currentTime);
+    uint64_t timeStamp = (uint64_t)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
+    fprintf(output,"%" PRIu64 ": READ LOCK ACQUIRED\n", timeStamp);
+
+    // Linear Search O(n)
+    hashRecord *record = NULL;
+    hashRecord *current = root;
+    while (current != NULL)
+    {
+        if (current->hash == hashedKey)
+        {
+            record = current;
+            break;
+        }
+        current = current->next;
+    }
+    
+    // Print command with timestamp
+    clock_gettime(CLOCK_REALTIME, &currentTime);
+    timeStamp = (uint64_t)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
+
+    if (record == NULL)
+    {
+        fprintf(output,"%" PRIu64 ": SEARCH, NOT FOUND, NOT FOUND\n", timeStamp);
+    }
+    else
+        fprintf(output,"%" PRIu64 ": SEARCH, %d, %s\n", timeStamp, hashedKey, key);
+
+    // Release Lock
+    pthread_rwlock_unlock(&rw_lock);
+    clock_gettime(CLOCK_REALTIME, &currentTime);
+    timeStamp = (uint64_t)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
+    fprintf(output,"%" PRIu64 ": READ LOCK RELEASED\n", timeStamp);
+}
+
 void insert(char *key, uint32_t salary /*, hashRecord *table*/)
 {
     // Variables for timestamp and messages
@@ -40,13 +83,13 @@ void insert(char *key, uint32_t salary /*, hashRecord *table*/)
     // Print command with timestamp
     clock_gettime(CLOCK_REALTIME, &currentTime);
     timeStamp = (uint64_t)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
-    fprintf(output,"%" PRIu64 ", Insert, %s, %d\n", timeStamp, key, salary);
+    fprintf(output,"%" PRIu64 ": INSERT, %d, %s, %d\n", timeStamp, hashedKey, key, salary);
 
     // Acquire Write Lock
     pthread_rwlock_wrlock(&rw_lock);
     clock_gettime(CLOCK_REALTIME, &currentTime);
     timeStamp = (uint64_t)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
-    fprintf(output,"%" PRIu64 ", Write Lock Acquired\n", timeStamp);
+    fprintf(output,"%" PRIu64 ": WRITE LOCK ACQUIRED\n", timeStamp);
 
     // Search for existing record with the same hash
     hashRecord *current = root;
@@ -62,7 +105,7 @@ void insert(char *key, uint32_t salary /*, hashRecord *table*/)
             pthread_rwlock_unlock(&rw_lock);
             clock_gettime(CLOCK_REALTIME, &currentTime);
             timeStamp = (uint64_t)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
-            fprintf(output,"%" PRIu64 ", Write Lock Released\n", timeStamp);
+            fprintf(output,"%" PRIu64 ": WRITE LOCK RELEASED\n", timeStamp);
 
             return;
         }
@@ -74,13 +117,12 @@ void insert(char *key, uint32_t salary /*, hashRecord *table*/)
     // Insert the new record at the beginning of the list
     entry->next = root;
     root = entry;
-    fprintf(output,"New Entry Created\n");
 
     // Release Write Lock
     pthread_rwlock_unlock(&rw_lock);
     clock_gettime(CLOCK_REALTIME, &currentTime);
     timeStamp = (uint64_t)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
-    fprintf(output,"%" PRIu64 ", Write Lock Released\n", timeStamp);
+    fprintf(output,"%" PRIu64 ": WRITE LOCK RELEASED\n", timeStamp);
 }
 
 void delete_entry(const char *key, hashRecord **table)
@@ -99,7 +141,7 @@ void delete_entry(const char *key, hashRecord **table)
     struct timespec currentTime;
     clock_gettime(CLOCK_REALTIME, &currentTime);
     uint64_t timeStamp = (uint64_t)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
-    fprintf(output,"%" PRIu64 " Write Lock Acquired\n", timeStamp);
+    fprintf(output,"%" PRIu64 ": WRITE LOCK ACQUIRED\n", timeStamp);
 
     // Traverse the list to find the record
     hashRecord *current = root;
@@ -120,15 +162,20 @@ void delete_entry(const char *key, hashRecord **table)
                 // The record to delete is not the head
                 prev->next = current->next;
             }
+
+            // Print command with timestamp
+            clock_gettime(CLOCK_REALTIME, &currentTime);
+            timeStamp = (uint64_t)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
+
             // Print deletion message and free memory
-            fprintf(output,"Record with name '%s' and hash %u deleted.\n", key, hashedKey);
+            fprintf(output,"%" PRIu64 ": DELETE, %d, %s\n", timeStamp, hashedKey, key);
             free(current);
 
             // Release Lock
             pthread_rwlock_unlock(&rw_lock);
             clock_gettime(CLOCK_REALTIME, &currentTime);
             timeStamp = (uint64_t)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
-            fprintf(output,"%" PRIu64 ", Write Lock Released\n", timeStamp);
+            fprintf(output,"%" PRIu64 ": WRITE LOCK RELEASED\n", timeStamp);
 
             return;
         }
@@ -136,14 +183,18 @@ void delete_entry(const char *key, hashRecord **table)
         current = current->next;
     }
 
+    // Print command with timestamp
+    clock_gettime(CLOCK_REALTIME, &currentTime);
+    timeStamp = (uint64_t)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
+
     // Record not found
-    fprintf(output,"Record with name '%s' not found.\n", key);
+    fprintf(output,"%" PRIu64 ": DELETE, NOT FOUND, NOT FOUND\n", timeStamp);
 
     // Release Lock
     pthread_rwlock_unlock(&rw_lock);
     clock_gettime(CLOCK_REALTIME, &currentTime);
     timeStamp = (uint64_t)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
-    fprintf(output,"%" PRIu64 ", Write Lock Released\n", timeStamp);
+    fprintf(output,"%" PRIu64 ": WRITE LOCK RELEASED\n", timeStamp);
 }
 
 void display_list(hashRecord *root)
@@ -190,11 +241,7 @@ void *execute_command(void *arg)
     }
     else if (strcmp(command->action, "search") == 0)
     {
-        hashRecord *result = search(command->name);
-        if (result != NULL)
-        {
-            fprintf(output,"Found: Name: %s, Salary: %d\n", result->name, result->salary);
-        }
+        search(command->name);
     }
     return NULL;
 }
