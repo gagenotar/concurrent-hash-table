@@ -33,8 +33,6 @@ void insert(char *key, uint32_t salary /*, hashRecord *table*/)
     // Variables for timestamp and messages
     struct timespec currentTime;
     uint64_t timeStamp; // maybe a little bit of an overkill
-    char *commandMsg = "";
-    char *lockMsg = "";
 
     // Convert key (Name) to hash
     uint32_t hashedKey = Jenkins_one_at_a_time_hash((const uint8_t *)key, strlen(key));
