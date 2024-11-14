@@ -1,0 +1,5 @@
+How to compile:
+
+for windows: open the terminal from the folder then use the command mingw32-make. This will compile the file then to run it you will use chash.exe
+
+for Linux: same things but you will use the command make. And to run you will use ./chash

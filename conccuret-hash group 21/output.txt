@@ -1,0 +1,42 @@
+1731595071002424576, Insert, Richard Garriot, 40000
+1731595071002424576, Write Lock Acquired
+New Entry Created
+1731595071002424576, Write Lock Released
+1731595071002424576, Insert, Shigeru Miyamoto, 51000
+1731595071002424576, Write Lock Acquired
+New Entry Created
+1731595071002424576, Write Lock Released
+1731595071002424576, Insert, Sid Meier, 50000
+1731595071002424576, Write Lock Acquired
+New Entry Created
+1731595071002424576, Write Lock Released
+1731595071002424576, Insert, Gabe Newell, 49000
+1731595071002424576, Write Lock Acquired
+New Entry Created
+1731595071002424576, Write Lock Released
+1731595071002424576, Insert, Hideo Kojima, 45000
+1731595071002424576, Write Lock Acquired
+New Entry Created
+1731595071002424576, Write Lock Released
+1731595071002424576, Insert, Carol Shaw, 41000
+1731595071002424576, Write Lock Acquired
+New Entry Created
+1731595071002424576, Write Lock Released
+1731595071002424576, Read Lock Acquired
+1731595071002424576, Read Lock Released
+Found: Name: Sid Meier, Salary: 50000
+1731595071002424576, Insert, Roberta Williams, 45900
+1731595071002424576, Write Lock Acquired
+New Entry Created
+1731595071002424576, Write Lock Released
+1731595071002424576 Write Lock Acquired
+Record with name 'Richard Garriot' and hash 2500551319 deleted.
+1731595071002424576, Write Lock Released
+1731595071002424576 Write Lock Acquired
+Record with name 'Sid Meier' and hash 3449751099 deleted.
+1731595071002424576, Write Lock Released
+Name: Roberta Williams, Salary: 45900
+Name: Carol Shaw, Salary: 41000
+Name: Hideo Kojima, Salary: 45000
+Name: Gabe Newell, Salary: 49000
+Name: Shigeru Miyamoto, Salary: 51000
