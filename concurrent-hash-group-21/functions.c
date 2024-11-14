@@ -63,7 +63,7 @@ void search(/*hashRecord *root,*/ char *key)
         fprintf(output,"%" PRIu64 ": SEARCH, NOT FOUND, NOT FOUND\n", timeStamp);
     }
     else
-        fprintf(output,"%" PRIu64 ": SEARCH, %d, %s\n", timeStamp, hashedKey, key);
+        fprintf(output,"%" PRIu64 ": SEARCH, %u, %s\n", timeStamp, hashedKey, key);
 
     // Release Lock
     pthread_rwlock_unlock(&rw_lock);
@@ -85,7 +85,7 @@ void insert(char *key, uint32_t salary /*, hashRecord *table*/)
     // Print command with timestamp
     clock_gettime(CLOCK_REALTIME, &currentTime);
     timeStamp = (uint64_t)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
-    fprintf(output,"%" PRIu64 ": INSERT, %d, %s, %d\n", timeStamp, hashedKey, key, salary);
+    fprintf(output, "%" PRIu64 ": INSERT, %u, %s, %d\n", timeStamp, hashedKey, key, salary);
 
     // Acquire Write Lock
     pthread_rwlock_wrlock(&rw_lock);
@@ -174,7 +174,7 @@ void delete_entry(const char *key, hashRecord **table)
             timeStamp = (uint64_t)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
 
             // Print deletion message and free memory
-            fprintf(output,"%" PRIu64 ": DELETE, %d, %s\n", timeStamp, hashedKey, key);
+            fprintf(output,"%" PRIu64 ": DELETE, %u, %s\n", timeStamp, hashedKey, key);
             free(current);
 
             // Release Lock
@@ -207,16 +207,53 @@ void delete_entry(const char *key, hashRecord **table)
 
 void display_list(hashRecord *root)
 {
+    // Display lock acquisition and release counts
+    fprintf(output, "Number of lock acquisitions: %d\n", numLocksAcquired);
+    fprintf(output, "Number of lock releases: %d\n", numLocksReleased);
+
+    // Create a temporary array to hold the records
+    int count = 0;
     hashRecord *current = root;
     while (current != NULL)
     {
-        fprintf(output,"%d, %s, %d\n", current->hash, current->name, current->salary);
+        count++;
         current = current->next;
     }
+
+    hashRecord **array = malloc(count * sizeof(hashRecord *));
+    current = root;
+    for (int i = 0; i < count; i++)
+    {
+        array[i] = current;
+        current = current->next;
+    }
+
+    // Sort the array by hash value
+    for (int i = 0; i < count - 1; i++)
+    {
+        for (int j = 0; j < count - i - 1; j++)
+        {
+            if (array[j]->hash > array[j + 1]->hash)
+            {
+                hashRecord *temp = array[j];
+                array[j] = array[j + 1];
+                array[j + 1] = temp;
+            }
+        }
+    }
+
+    // Print the sorted list
+    for (int i = 0; i < count; i++)
+    {
+        fprintf(output, "%u, %s, %d\n", array[i]->hash, array[i]->name, array[i]->salary);
+    }
+
+    free(array);
 }
 
 void *execute_command(void *arg)
 {
+    struct timespec currentTime;
     struct Commands *command = (struct Commands *)arg;
 
     if (strcmp(command->action, "insert") == 0)
@@ -226,11 +263,12 @@ void *execute_command(void *arg)
         // Signal that an insert operation is done
         pthread_mutex_lock(&cv_mutex);
         inserts_done++;
-        //printf("Insert done: %d/%d\n", inserts_done, numInserts); // Debugging statement
         if (inserts_done == numInserts)
         {
             pthread_cond_broadcast(&cv);
-            //printf("All inserts done, broadcast signal sent.\n"); // Debugging statement
+            clock_gettime(CLOCK_REALTIME, &currentTime);
+            uint64_t timeStamp = (uint64_t)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
+            fprintf(output,"%" PRIu64 ": DELETE AWAKENED\n", timeStamp);
         }
         pthread_mutex_unlock(&cv_mutex);
     }
@@ -240,7 +278,9 @@ void *execute_command(void *arg)
         pthread_mutex_lock(&cv_mutex);
         while (inserts_done < numInserts)
         {
-            //printf("Waiting for inserts to complete. Current: %d/%d\n", inserts_done, numInserts); // Debugging statement
+            clock_gettime(CLOCK_REALTIME, &currentTime);
+            uint64_t timeStamp = (uint64_t)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
+            fprintf(output,"%" PRIu64 ": WAITING ON INSERTS\n", timeStamp);
             pthread_cond_wait(&cv, &cv_mutex);
         }
         pthread_mutex_unlock(&cv_mutex);

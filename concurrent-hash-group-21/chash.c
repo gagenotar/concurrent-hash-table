@@ -20,6 +20,8 @@ pthread_mutex_t cv_mutex = PTHREAD_MUTEX_INITIALIZER; // Initialize the mutex
 hashRecord *root = NULL; // Head of the linked list
 int inserts_done = 0; // Number of insert operations completed
 int numInserts = 0; // Number of insert commands
+int numLocksAcquired = 0; // Number of locks acquired
+int numLocksReleased = 0; // Number of locks released
 
 int main(int argc, char *argv[])
 {
@@ -73,8 +75,9 @@ int main(int argc, char *argv[])
     fclose(input);
     output = fopen("output.txt","w");
 
-    numLocksAcquired = 0; 
-    numLocksReleased = 0;
+    // Display number of threads and commands
+    fprintf(output,"Running %d threads\n", numThreads);
+
     pthread_rwlock_init(&rw_lock, NULL); // Initialize the read-write lock
 
     // Create and execute threads
