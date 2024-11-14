@@ -23,14 +23,7 @@ int numInserts = 0; // Number of insert commands
 
 int main(int argc, char *argv[])
 {
-    input = fopen("commands.txt","r");
-
-
-    // Create the input and output files
-    // Make sure that your commands.txt input file is in the same
-    // directory as the .c file so it can read it.
-    //FILE* input = fopen("commands.txt","r");
-    //FILE* output = fopen("output.txt","w");   
+    input = fopen("commands.txt","r"); 
 
     // Create a buffer to read each line 
     char line[256];
@@ -80,6 +73,8 @@ int main(int argc, char *argv[])
     fclose(input);
     output = fopen("output.txt","w");
 
+    numLocksAcquired = 0; 
+    numLocksReleased = 0;
     pthread_rwlock_init(&rw_lock, NULL); // Initialize the read-write lock
 
     // Create and execute threads

@@ -39,6 +39,7 @@ void search(/*hashRecord *root,*/ char *key)
     clock_gettime(CLOCK_REALTIME, &currentTime);
     uint64_t timeStamp = (uint64_t)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
     fprintf(output,"%" PRIu64 ": READ LOCK ACQUIRED\n", timeStamp);
+    numLocksAcquired++;
 
     // Linear Search O(n)
     hashRecord *record = NULL;
@@ -69,6 +70,7 @@ void search(/*hashRecord *root,*/ char *key)
     clock_gettime(CLOCK_REALTIME, &currentTime);
     timeStamp = (uint64_t)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
     fprintf(output,"%" PRIu64 ": READ LOCK RELEASED\n", timeStamp);
+    numLocksReleased++;
 }
 
 void insert(char *key, uint32_t salary /*, hashRecord *table*/)
@@ -90,6 +92,7 @@ void insert(char *key, uint32_t salary /*, hashRecord *table*/)
     clock_gettime(CLOCK_REALTIME, &currentTime);
     timeStamp = (uint64_t)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
     fprintf(output,"%" PRIu64 ": WRITE LOCK ACQUIRED\n", timeStamp);
+    numLocksAcquired++;
 
     // Search for existing record with the same hash
     hashRecord *current = root;
@@ -106,6 +109,7 @@ void insert(char *key, uint32_t salary /*, hashRecord *table*/)
             clock_gettime(CLOCK_REALTIME, &currentTime);
             timeStamp = (uint64_t)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
             fprintf(output,"%" PRIu64 ": WRITE LOCK RELEASED\n", timeStamp);
+            numLocksReleased++;
 
             return;
         }
@@ -123,6 +127,7 @@ void insert(char *key, uint32_t salary /*, hashRecord *table*/)
     clock_gettime(CLOCK_REALTIME, &currentTime);
     timeStamp = (uint64_t)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
     fprintf(output,"%" PRIu64 ": WRITE LOCK RELEASED\n", timeStamp);
+    numLocksReleased++;
 }
 
 void delete_entry(const char *key, hashRecord **table)
@@ -142,6 +147,7 @@ void delete_entry(const char *key, hashRecord **table)
     clock_gettime(CLOCK_REALTIME, &currentTime);
     uint64_t timeStamp = (uint64_t)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
     fprintf(output,"%" PRIu64 ": WRITE LOCK ACQUIRED\n", timeStamp);
+    numLocksAcquired++;
 
     // Traverse the list to find the record
     hashRecord *current = root;
@@ -176,6 +182,7 @@ void delete_entry(const char *key, hashRecord **table)
             clock_gettime(CLOCK_REALTIME, &currentTime);
             timeStamp = (uint64_t)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
             fprintf(output,"%" PRIu64 ": WRITE LOCK RELEASED\n", timeStamp);
+            numLocksReleased++;
 
             return;
         }
@@ -195,6 +202,7 @@ void delete_entry(const char *key, hashRecord **table)
     clock_gettime(CLOCK_REALTIME, &currentTime);
     timeStamp = (uint64_t)currentTime.tv_sec * 1e9 + currentTime.tv_nsec;
     fprintf(output,"%" PRIu64 ": WRITE LOCK RELEASED\n", timeStamp);
+    numLocksReleased++;
 }
 
 void display_list(hashRecord *root)
@@ -202,7 +210,7 @@ void display_list(hashRecord *root)
     hashRecord *current = root;
     while (current != NULL)
     {
-        fprintf(output,"Name: %s, Salary: %d\n", current->name, current->salary);
+        fprintf(output,"%d, %s, %d\n", current->hash, current->name, current->salary);
         current = current->next;
     }
 }

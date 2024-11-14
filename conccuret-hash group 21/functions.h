@@ -7,6 +7,8 @@
 
 extern int inserts_done;
 extern int numInserts;
+extern int numLocksAcquired;
+extern int numLocksReleased;
 
 uint32_t Jenkins_one_at_a_time_hash(const uint8_t *key, size_t length);
 void search(/*hashRecord *root,*/ char *key);

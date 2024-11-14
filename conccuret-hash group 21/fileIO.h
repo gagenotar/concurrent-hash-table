@@ -14,6 +14,3 @@ extern FILE* input;
 extern FILE* output; 
 
 #endif
-
-
-
