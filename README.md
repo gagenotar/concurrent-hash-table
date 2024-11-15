@@ -12,12 +12,12 @@ It is designed to help students visualize concurrency concepts.
 
 ### 🛠️ Compilation
 
-#### 🪟 Windows
+#### Windows
 1. Open the terminal from the project folder.
 2. Run the command: `mingw32-make`
 3. To run the compiled file, use: `chash.exe`
 
-#### 🐧 Linux
+#### Linux
 1. Open the terminal from the project folder.
 2. Run the command: `make`
 3. To run the compiled file, use: `./chash`
@@ -31,7 +31,7 @@ It is designed to help students visualize concurrency concepts.
 
 ### 📄 Commands and Output files
 
-#### 📜 Commands File
+#### Commands File
 The `commands.txt` file contains a list of commands that the program will execute. Each command should be on a new line. The format of the commands is as follows:
 - `insert <key> <value>`: Inserts a key-value pair into the hash table.
 - `delete <key> 0`: Deletes the key-value pair associated with the given key.
@@ -52,7 +52,7 @@ insert,Carol Shaw,41000
 search,Sid Meier,0
 ```
 
-#### 📄 Output File
+#### Output File
 The `output.txt` file contains the results of the commands executed by the program. Each result corresponds to a command from the `commands.txt` file. The format of the output is as follows:
 - For `insert` commands, the output will include the thread ID, the operation, the key, and the value.
 - For `delete` commands, the output will include the thread ID, the operation, and the key.
