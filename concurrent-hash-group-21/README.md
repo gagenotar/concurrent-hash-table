@@ -25,3 +25,5 @@ This project implements a concurrent hash table with read-write locks in C.
 GitHub Copilot was used to generate some of the thread and condition variable operations. The AI provided suggestions for implementing the read-write locks, condition variables, and thread synchronization mechanisms. Specifically, "implement thread synchronization using pthreads" and "generate code for condition variables in C" were such prompts used to get the results.
 
 I used AI in some debugging for how to do the makefile. It provided some structure on how to do that, and it helped with any errors/warnings that occured while I tried to compile the makefile. I also used it to refresh my knowledge on some of the functions in .h files (string.h,stdio.h,etc) to ensure that I was using them correctly and that they could be used for the purposes that I needed them. -Noah Elder 
+
+I Used AI in understanfing the pthreads functions and to brush up on some forgotten c. some code was used from chat GPT for the threads.(gpt link: https://chatgpt.com/share/673797b2-a840-8007-9032-063b5b4eef82) ~Rhami Thrower
