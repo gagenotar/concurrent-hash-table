@@ -1,12 +1,12 @@
-# 🎉 Concurrent Hash Table 🎉
+# Concurrent Hash Table
 
 This project implements a concurrent hash table in C for COP 4600.
 It is designed to help students visualize concurrency concepts.
 
 ## 🚀 Features
-- 🛠️ Implements read-write locks
-- 🔄 Utilizes condition variables
-- 🧵 Uses pthread library for threading
+- Implements read-write locks
+- Utilizes condition variables
+- Uses pthread library for threading
 
 ## 🏁 Getting Started
 
