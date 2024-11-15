@@ -1,37 +1,37 @@
-# Concurrent Hash Table
+# 🎉 Concurrent Hash Table 🎉
 
 This project implements a concurrent hash table in C for COP 4600.
 It is designed to help students visualize concurrency concepts.
 
-## Features
-- Implements read-write locks
-- Utilizes condition variables
-- Uses pthread library for threading
+## 🚀 Features
+- 🛠️ Implements read-write locks
+- 🔄 Utilizes condition variables
+- 🧵 Uses pthread library for threading
 
-## Getting Started
+## 🏁 Getting Started
 
-### Compilation
+### 🛠️ Compilation
 
-#### Windows
+#### 🪟 Windows
 1. Open the terminal from the project folder.
 2. Run the command: `mingw32-make`
 3. To run the compiled file, use: `chash.exe`
 
-#### Linux
+#### 🐧 Linux
 1. Open the terminal from the project folder.
 2. Run the command: `make`
 3. To run the compiled file, use: `./chash`
 
-## Usage
+## 📖 Usage
 
-### General
+### ⚙️ General
 1. Ensure that `commands.txt` is in the same directory as the executable.
 2. Run the executable (`chash.exe` on Windows or `./chash` on Linux).
 3. The program will read the commands from `commands.txt` and output the results to `output.txt`.
 
-### Commands and Output files
+### 📄 Commands and Output files
 
-#### Commands File
+#### 📜 Commands File
 The `commands.txt` file contains a list of commands that the program will execute. Each command should be on a new line. The format of the commands is as follows:
 - `insert <key> <value>`: Inserts a key-value pair into the hash table.
 - `delete <key> 0`: Deletes the key-value pair associated with the given key.
@@ -52,7 +52,7 @@ insert,Carol Shaw,41000
 search,Sid Meier,0
 ```
 
-#### Output File
+#### 📄 Output File
 The `output.txt` file contains the results of the commands executed by the program. Each result corresponds to a command from the `commands.txt` file. The format of the output is as follows:
 - For `insert` commands, the output will include the thread ID, the operation, the key, and the value.
 - For `delete` commands, the output will include the thread ID, the operation, and the key.
@@ -105,10 +105,10 @@ Number of lock releases: 10
 2569965317, Hideo Kojima, 45000
 ```
 
-## Contributing
+## 🤝 Contributing
 
 Contributions are welcome! Please fork the repository and submit a pull request.
 
-## License
+## 📜 License
 
 This project is licensed under the MIT License.
